@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>m5x2 AI Usage</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 24px 28px; }
+h1 { font-size: 1.25rem; font-weight: 700; color: #f0f6fc; }
+.header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; }
+.header-meta { font-size: 0.72rem; color: #484f58; }
+#warn-banner { display: none; background: #2d1b00; border: 1px solid #92400e; border-radius: 8px; padding: 10px 16px; margin-bottom: 18px; color: #fbbf24; font-size: 0.82rem; }
+#warn-banner strong { color: #f59e0b; }
+.team-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+.team-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px 18px; }
+.team-card .val { font-size: 1.6rem; font-weight: 700; color: #f0f6fc; line-height: 1; }
+.team-card .lbl { font-size: 0.7rem; color: #6e7681; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.team-card .sub { font-size: 0.7rem; color: #484f58; margin-top: 2px; }
+.user-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+.user-card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 18px 20px; }
+.user-card.warn { border-color: #92400e; }
+.user-card.over { border-color: #7f1d1d; }
+.card-name { font-size: 1rem; font-weight: 700; color: #f0f6fc; display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.cs .v { font-size: 1.35rem; font-weight: 700; color: #f0f6fc; line-height: 1; }
+.cs .l { font-size: 0.68rem; color: #484f58; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+.budget-section { margin-bottom: 10px; }
+.budget-label { display: flex; justify-content: space-between; font-size: 0.72rem; color: #6e7681; margin-bottom: 4px; }
+.budget-bar { height: 6px; background: #21262d; border-radius: 3px; overflow: hidden; }
+.budget-fill { height: 100%; border-radius: 3px; }
+.no-budget { font-size: 0.72rem; color: #484f58; font-style: italic; }
+.rl-badge { display: inline-block; font-size: 0.68rem; padding: 2px 7px; border-radius: 4px; background: #1c2028; border: 1px solid #30363d; color: #8b949e; margin-top: 8px; }
+.rl-badge.recent { background: #2d1b00; border-color: #92400e; color: #fbbf24; }
+.sync-note { font-size: 0.68rem; color: #484f58; margin-top: 6px; }
+.section { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 18px 20px; margin-bottom: 18px; }
+.section h2 { font-size: 0.72rem; font-weight: 600; color: #6e7681; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+canvas { max-height: 220px; width: 100% !important; }
+.heat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.heat-lbl { width: 30px; font-size: 0.72rem; color: #6e7681; text-align: right; flex-shrink: 0; }
+.heat-cells { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; flex: 1; }
+.hc { aspect-ratio: 1; border-radius: 2px; cursor: default; position: relative; }
+.hc:hover::after { content: attr(data-tip); position: absolute; bottom: 115%; left: 50%; transform: translateX(-50%); background: #0d1117; border: 1px solid #30363d; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem; white-space: nowrap; z-index: 20; color: #c9d1d9; pointer-events: none; }
+.heat-x { display: grid; grid-template-columns: 30px repeat(24, 1fr); gap: 2px; margin-top: 3px; }
+.heat-x span { font-size: 0.58rem; color: #30363d; text-align: center; }
+.rl-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.rl-table th { text-align: left; color: #6e7681; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid #21262d; }
+.rl-table td { padding: 6px 10px; border-bottom: 1px solid #161b22; color: #8b949e; }
+.rl-table td:first-child { color: #ef4444; }
+.note { font-size: 0.68rem; color: #484f58; margin-top: 16px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="warn-banner"><strong>Usage Warning:</strong> <span id="warn-text"></span></div>
+
+<div class="header">
+  <h1>m5x2 AI Usage</h1>
+  <span class="header-meta">API-equivalent cost &nbsp;&middot;&nbsp; Generated 2026-05-05</span>
+</div>
+
+<div class="team-strip" id="teamStrip"></div>
+<div class="user-cards" id="userCards"></div>
+
+<div class="section">
+  <h2>Daily Spend (API Equivalent $) &nbsp;<span style="color:#ef4444;font-size:0.65rem">&#9474; = rate limit event</span></h2>
+  <canvas id="dailyChart"></canvas>
+</div>
+
+<div class="two-col">
+  <div class="section"><h2>Model Cost Breakdown</h2><canvas id="modelChart"></canvas></div>
+  <div class="section"><h2>Active Hours</h2><div id="heatmap"></div></div>
+</div>
+
+<div class="two-col" id="jmSection" style="display:none">
+  <div class="section"><h2>MCP Tool Calls by Server</h2><canvas id="mcpChart"></canvas></div>
+  <div class="section"><h2>Response Latency (seconds)</h2><canvas id="latencyChart"></canvas></div>
+</div>
+
+<div class="section" id="rlSection" style="display:none">
+  <h2>Rate Limit Events</h2>
+  <table class="rl-table">
+    <thead><tr><th>Time</th><th>User</th><th>Type</th><th>Note</th></tr></thead>
+    <tbody id="rlBody"></tbody>
+  </table>
+</div>
+
+<p class="note">Costs are API-equivalent estimates using Anthropic published pricing. Claude.ai Enterprise is seat-based; actual billed amount differs.<br>
+Data from ~/.claude/stats-cache.json per user. Rate limit events from ~/.claude/rate-limits.jsonl.</p>
+
+<script>
+const USERS = [{"user": "ian", "name": "Ian", "total_cost": 103.01, "monthly_cost": 0, "model_costs": {"claude-sonnet-4-6": 95.8143, "claude-haiku-4-5-20251001": 7.1943}, "daily_costs": {"2026-03-10": 2.5318, "2026-03-11": 6.4872, "2026-03-12": 0.994, "2026-03-13": 4.3568, "2026-03-16": 1.2745, "2026-03-18": 0.1905, "2026-03-25": 0.0725, "2026-03-29": 5.0996, "2026-03-30": 10.6123, "2026-03-31": 18.8282, "2026-04-01": 2.4775, "2026-04-02": 2.8437, "2026-04-03": 32.5369, "2026-04-04": 0.6331, "2026-04-05": 1.0676, "2026-04-06": 4.3891, "2026-04-07": 8.6135}, "avg_daily": 7.509, "proj_monthly": 225.26, "sessions": 81, "messages": 7884, "active_days": 17, "daily_activity": [{"date": "2026-03-10", "messageCount": 477, "sessionCount": 6, "toolCallCount": 143}, {"date": "2026-03-11", "messageCount": 917, "sessionCount": 14, "toolCallCount": 285}, {"date": "2026-03-12", "messageCount": 178, "sessionCount": 3, "toolCallCount": 61}, {"date": "2026-03-13", "messageCount": 433, "sessionCount": 1, "toolCallCount": 182}, {"date": "2026-03-16", "messageCount": 110, "sessionCount": 3, "toolCallCount": 38}, {"date": "2026-03-18", "messageCount": 21, "sessionCount": 1, "toolCallCount": 7}, {"date": "2026-03-25", "messageCount": 8, "sessionCount": 1, "toolCallCount": 1}, {"date": "2026-03-29", "messageCount": 486, "sessionCount": 7, "toolCallCount": 138}, {"date": "2026-03-30", "messageCount": 895, "sessionCount": 8, "toolCallCount": 304}, {"date": "2026-03-31", "messageCount": 1282, "sessionCount": 10, "toolCallCount": 392}, {"date": "2026-04-01", "messageCount": 159, "sessionCount": 4, "toolCallCount": 41}, {"date": "2026-04-02", "messageCount": 199, "sessionCount": 5, "toolCallCount": 62}, {"date": "2026-04-03", "messageCount": 1657, "sessionCount": 5, "toolCallCount": 555}, {"date": "2026-04-04", "messageCount": 42, "sessionCount": 1, "toolCallCount": 13}, {"date": "2026-04-05", "messageCount": 81, "sessionCount": 1, "toolCallCount": 29}, {"date": "2026-04-06", "messageCount": 364, "sessionCount": 4, "toolCallCount": 99}, {"date": "2026-04-07", "messageCount": 575, "sessionCount": 7, "toolCallCount": 183}], "hour_counts": {"3": 1, "4": 1, "12": 5, "13": 1, "14": 10, "15": 11, "16": 8, "17": 4, "18": 8, "19": 7, "20": 9, "21": 12, "22": 4}, "model_usage": {"claude-sonnet-4-6": {"inputTokens": 39714, "outputTokens": 885740, "cacheReadInputTokens": 170001525, "cacheCreationInputTokens": 8375619, "webSearchRequests": 0, "costUSD": 0, "contextWindow": 0, "maxOutputTokens": 0}, "claude-haiku-4-5-20251001": {"inputTokens": 19884, "outputTokens": 51161, "cacheReadInputTokens": 29275024, "cacheCreationInputTokens": 4631784, "webSearchRequests": 0, "costUSD": 0, "contextWindow": 0, "maxOutputTokens": 0}}, "last_sync": "2026-04-07", "rate_limits": [], "session_stats": null, "monthly_included": null, "warn_pct": 80, "monthly_pct": null, "over_included": false}];
+const MODEL_NAMES = {"claude-opus-4-6":"Opus 4.6","claude-opus-4-5-20251101":"Opus 4.5","claude-sonnet-4-6":"Sonnet 4.6","claude-sonnet-4-5-20250929":"Sonnet 4.5","claude-haiku-4-5-20251001":"Haiku 4.5"};
+const MODEL_COLORS = {"claude-opus-4-6":"#ef4444","claude-opus-4-5-20251101":"#f87171","claude-sonnet-4-6":"#6366f1","claude-sonnet-4-5-20250929":"#a5b4fc","claude-haiku-4-5-20251001":"#10b981"};
+const PALETTE = ["#6366f1","#10b981","#f59e0b","#06b6d4","#8b5cf6"];
+const MCP_COLORS = ["#ef4444","#6366f1","#f59e0b","#10b981","#06b6d4","#8b5cf6"];
+const USER_COLORS = {};
+USERS.forEach((u,i) => { USER_COLORS[u.user] = PALETTE[i % PALETTE.length]; });
+
+function fmtUSD(n) {
+  if (n >= 1000) return '$'+(n/1000).toFixed(1)+'K';
+  if (n >= 100)  return '$'+n.toFixed(0);
+  if (n >= 10)   return '$'+n.toFixed(1);
+  return '$'+n.toFixed(2);
+}
+
+// Warning banner
+const warnings = USERS.filter(u => u.monthly_pct !== null && u.monthly_pct >= u.warn_pct);
+if (warnings.length) {
+  document.getElementById('warn-banner').style.display = 'block';
+  document.getElementById('warn-text').textContent = warnings.map(u =>
+    `${u.name}: ${u.monthly_pct}% of ${fmtUSD(u.monthly_included)} monthly budget`).join(' | ');
+}
+
+// Team strip
+const teamTotal    = USERS.reduce((s,u) => s+u.total_cost, 0);
+const teamSessions = USERS.reduce((s,u) => s+u.sessions, 0);
+const teamRL       = USERS.reduce((s,u) => s+u.rate_limits.length, 0);
+const teamAvgDay   = USERS.reduce((s,u) => s+u.avg_daily, 0);
+
+document.getElementById('teamStrip').innerHTML = [
+  {val: fmtUSD(teamTotal),   lbl: 'Total API Equiv', sub: 'all users, all time'},
+  {val: teamSessions,        lbl: 'Total Sessions',  sub: fmtUSD(teamAvgDay)+'/day avg (7d)'},
+  {val: teamRL || '0',       lbl: 'Rate Limit Events', sub: teamRL ? 'logged hits across team' : 'none logged yet'},
+].map(c => `<div class="team-card"><div class="val">${c.val}</div><div class="lbl">${c.lbl}</div><div class="sub">${c.sub}</div></div>`).join('');
+
+// User cards
+const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
+
+document.getElementById('userCards').innerHTML = USERS.map(u => {
+  const recentRL = u.rate_limits.filter(e => new Date(e.timestamp) >= sevenDaysAgo);
+  const hasWarn  = u.monthly_pct !== null && u.monthly_pct >= u.warn_pct;
+  const cls = u.over_included ? 'over' : hasWarn ? 'warn' : '';
+  const color = USER_COLORS[u.user];
+
+  let budgetHtml;
+  if (u.monthly_included) {
+    const pct = Math.min(u.monthly_pct || 0, 100);
+    const barColor = pct >= u.warn_pct ? '#ef4444' : pct >= 60 ? '#f59e0b' : '#10b981';
+    const daysLeft = u.avg_daily > 0 ? Math.round((u.monthly_included - u.monthly_cost) / u.avg_daily) : '?';
+    budgetHtml = `<div class="budget-section">
+      <div class="budget-label"><span>${fmtUSD(u.monthly_cost)} of ${fmtUSD(u.monthly_included)}</span><span style="color:${barColor}">${u.monthly_pct}%</span></div>
+      <div class="budget-bar"><div class="budget-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <div style="font-size:0.7rem;color:#484f58;margin-top:4px">${u.over_included ? 'Over included &mdash; extra usage active' : daysLeft+' days at current pace'}</div>
+    </div>`;
+  } else {
+    budgetHtml = `<div class="no-budget">No budget set &mdash; configure monthly_included_usd in config.json</div>`;
+  }
+
+  const rlBadge = u.rate_limits.length
+    ? `<span class="rl-badge ${recentRL.length ? 'recent' : ''}">${u.rate_limits.length} limit hit${u.rate_limits.length>1?'s':''}${recentRL.length?' (recent)':''}</span>`
+    : '';
+
+  return `<div class="user-card ${cls}">
+    <div class="card-name"><span class="dot" style="background:${color}"></span>${u.name}</div>
+    <div class="card-stats">
+      <div class="cs"><div class="v">${fmtUSD(u.total_cost)}</div><div class="l">API Equiv (all time)</div></div>
+      <div class="cs"><div class="v">${fmtUSD(u.monthly_cost)}</div><div class="l">This month</div></div>
+      <div class="cs"><div class="v">${fmtUSD(u.avg_daily)}</div><div class="l">$/day (7d avg)</div></div>
+      <div class="cs"><div class="v">${fmtUSD(u.proj_monthly)}</div><div class="l">Projected/mo</div></div>
+    </div>
+    ${budgetHtml}${rlBadge}
+    <div class="sync-note">${u.sessions} sessions &middot; last sync: ${u.last_sync}</div>
+  </div>`;
+}).join('');
+
+// Rate limit line plugin
+const allRLDates = new Set();
+USERS.forEach(u => u.rate_limits.forEach(e => allRLDates.add(e.timestamp.slice(0,10))));
+
+Chart.register({
+  id: 'rl-lines',
+  afterDraw(chart) {
+    const rdates = chart.config.options._rlDates;
+    const adates = chart.config.options._allDates;
+    if (!rdates || !rdates.length || !adates) return;
+    const ctx = chart.ctx, area = chart.chartArea, xs = chart.scales.x;
+    rdates.forEach(d => {
+      const idx = adates.indexOf(d);
+      if (idx === -1) return;
+      const x = xs.getPixelForValue(idx);
+      ctx.save();
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1.5; ctx.setLineDash([3,4]);
+      ctx.beginPath(); ctx.moveTo(x, area.top); ctx.lineTo(x, area.bottom); ctx.stroke();
+      ctx.restore();
+    });
+  }
+});
+
+const baseOpts = {
+  responsive: true, maintainAspectRatio: true,
+  plugins: {legend: {labels: {color: '#6e7681', boxWidth: 10, font: {size: 10}}}},
+  scales: {
+    x: {ticks: {color: '#484f58', font: {size: 9}, maxRotation: 45}, grid: {color: '#21262d'}},
+    y: {ticks: {color: '#484f58', font: {size: 10}}, grid: {color: '#21262d'}}
+  }
+};
+
+// Daily spend chart
+(function() {
+  const allDates = new Set();
+  USERS.forEach(u => Object.keys(u.daily_costs).forEach(d => allDates.add(d)));
+  const dates = [...allDates].sort().slice(-60);
+  const labels = dates.map(d => d.slice(5));
+  new Chart(document.getElementById('dailyChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: USERS.map(u => ({
+        label: u.name,
+        data: dates.map(d => u.daily_costs[d] || null),
+        backgroundColor: USER_COLORS[u.user]+'bb',
+        borderRadius: 2, stack: 'days',
+      }))
+    },
+    options: {
+      ...baseOpts,
+      _rlDates: [...allRLDates], _allDates: dates,
+      scales: {
+        ...baseOpts.scales,
+        x: {...baseOpts.scales.x, stacked: true},
+        y: {...baseOpts.scales.y, stacked: true,
+          ticks: {...baseOpts.scales.y.ticks, callback: v => '$'+v.toFixed(v>=10?0:1)}}
+      }
+    }
+  });
+})();
+
+// Model cost chart
+(function() {
+  const allModels = [...new Set(USERS.flatMap(u => Object.keys(u.model_costs)))];
+  new Chart(document.getElementById('modelChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: USERS.map(u => u.name),
+      datasets: allModels.map(m => ({
+        label: MODEL_NAMES[m] || m,
+        data: USERS.map(u => u.model_costs[m] || 0),
+        backgroundColor: MODEL_COLORS[m] || '#8b949e',
+        borderRadius: 2, stack: 'models',
+      }))
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        ...baseOpts.scales,
+        x: {...baseOpts.scales.x, stacked: true},
+        y: {...baseOpts.scales.y, stacked: true,
+          ticks: {...baseOpts.scales.y.ticks, callback: v => '$'+(v>=1000?(v/1000).toFixed(1)+'K':v.toFixed(0))}}
+      }
+    }
+  });
+})();
+
+// Heatmap
+(function() {
+  const hm = document.getElementById('heatmap');
+  USERS.forEach(u => {
+    const counts = u.hour_counts;
+    const max = Math.max(1, ...Object.values(counts).map(Number));
+    const row = document.createElement('div'); row.className = 'heat-row';
+    const lbl = document.createElement('div'); lbl.className = 'heat-lbl'; lbl.textContent = u.name;
+    row.appendChild(lbl);
+    const cells = document.createElement('div'); cells.className = 'heat-cells';
+    const hex = USER_COLORS[u.user].replace('#','');
+    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+    for (let h = 0; h < 24; h++) {
+      const c = Number(counts[String(h)] || 0);
+      const alpha = c > 0 ? 0.1 + (c/max)*0.9 : 0.04;
+      const cell = document.createElement('div'); cell.className = 'hc';
+      cell.style.background = `rgba(${r},${g},${b},${alpha})`;
+      cell.setAttribute('data-tip', `${h}:00 — ${c} sessions`);
+      cells.appendChild(cell);
+    }
+    row.appendChild(cells); hm.appendChild(row);
+  });
+  const xRow = document.createElement('div'); xRow.className = 'heat-x';
+  xRow.innerHTML = '<span></span>'+Array.from({length:24},(_,i)=>`<span>${i%4===0?i:''}</span>`).join('');
+  hm.appendChild(xRow);
+})();
+
+// MCP + latency (shown for any user with session_stats)
+(function() {
+  const withSS = USERS.find(u => u.session_stats);
+  if (!withSS) return;
+  document.getElementById('jmSection').style.display = 'grid';
+  const ss = withSS.session_stats;
+  if (ss.mcp && ss.mcp.daily && ss.mcp.daily.length) {
+    const days = ss.mcp.daily.slice(-30);
+    const servers = ss.mcp.servers || [];
+    new Chart(document.getElementById('mcpChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: days.map(d => d.date.slice(5)),
+        datasets: servers.map((s,i) => ({
+          label: s.replace(/-mcp$|_server$/,'').replace(/_/g,' '),
+          data: days.map(d => d[s]||0),
+          backgroundColor: MCP_COLORS[i%MCP_COLORS.length],
+          borderRadius: 2, stack: 'mcp',
+        }))
+      },
+      options: {...baseOpts, scales: {...baseOpts.scales,
+        x:{...baseOpts.scales.x,stacked:true}, y:{...baseOpts.scales.y,stacked:true}}}
+    });
+  }
+  if (ss.latency && ss.latency.daily && ss.latency.daily.length) {
+    const days = ss.latency.daily.slice(-30);
+    new Chart(document.getElementById('latencyChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: days.map(d => d.date.slice(5)),
+        datasets: [
+          {label:'p50 (s)', data:days.map(d=>d.p50_wall), borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.08)', tension:0.3, pointRadius:2, fill:true, borderWidth:1.5},
+          {label:'p95 (s)', data:days.map(d=>d.p95_wall), borderColor:'#f59e0b', backgroundColor:'transparent', tension:0.3, pointRadius:2, fill:false, borderWidth:1.5},
+        ]
+      },
+      options: baseOpts
+    });
+  }
+})();
+
+// Rate limit events table
+(function() {
+  const allRL = USERS.flatMap(u => u.rate_limits.map(e => ({...e, userName: u.name})))
+    .sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+  if (!allRL.length) return;
+  document.getElementById('rlSection').style.display = 'block';
+  document.getElementById('rlBody').innerHTML = allRL.map(e =>
+    `<tr><td>${new Date(e.timestamp).toLocaleString()}</td><td>${e.userName}</td><td>${e.type||'hit'}</td><td>${e.note||''}</td></tr>`
+  ).join('');
+})();
+</script>
+</body>
+</html>
